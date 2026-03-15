@@ -1,7 +1,8 @@
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzi6BX24ENHKGBPOUmFbzyW_woTgFkhGF24Xn-7TjO5OdE9sTVUEFQwKytgVrCxHQXpPA/exec";
+
 const jsPsych = initJsPsych({
   on_finish: function() {
     const allTrials = jsPsych.data.get().values();
-
     let mergedData = {};
 
     allTrials.forEach(trial => {
@@ -10,10 +11,12 @@ const jsPsych = initJsPsych({
       }
     });
 
+    // ランダム割付情報を保存
     mergedData.comment_condition = commentCondition;
     mergedData.video_condition = selectedVideo.video_condition;
     mergedData.video_id = selectedVideo.video_id;
 
+    // コメント欄操作チェックを数値化
     if (mergedData.comment_check === "コメント欄はこの報道に批判的だった（比較的穏やか）") {
       mergedData.comment_check = 1;
     } else if (mergedData.comment_check === "コメント欄はこの報道に好意的だった") {
@@ -26,11 +29,12 @@ const jsPsych = initJsPsych({
       mergedData.comment_check = 5;
     }
 
+    // YouTubeニュース頻度を数値化
     if (mergedData.youtube_news_freq === "1日に複数回") {
       mergedData.youtube_news_freq = 1;
     } else if (mergedData.youtube_news_freq === "1日に1回程度") {
       mergedData.youtube_news_freq = 2;
-    } else if (mergedData.youtube_news_freq === "週2，3日に1回程度") {
+    } else if (mergedData.youtube_news_freq === "週に2〜3回程度") {
       mergedData.youtube_news_freq = 3;
     } else if (mergedData.youtube_news_freq === "週に1回程度") {
       mergedData.youtube_news_freq = 4;
@@ -45,9 +49,9 @@ const jsPsych = initJsPsych({
     } else if (mergedData.youtube_news_freq === "全く見ない") {
       mergedData.youtube_news_freq = 9;
     }
-    // 0始まり -> 1始まり に補正する項目
+
+    // 0始まり → 1始まり補正
     const likertKeys = [
-      // イデオロギー
       "ideo_9jo",
       "ideo_welfare",
       "ideo_name",
@@ -57,11 +61,7 @@ const jsPsych = initJsPsych({
       "ideo_aikoku",
       "ideo_immigrant",
       "ideo_marriage",
-
-      // テレビ信頼
       "tv_news_trust",
-
-      // 事後評価
       "fairness",
       "bias",
       "satisfaction"
@@ -76,13 +76,12 @@ const jsPsych = initJsPsych({
     console.log("Merged participant data:");
     console.log(mergedData);
 
-    // 隠し iframe を作る
+    // GASへ送信
     const iframe = document.createElement("iframe");
     iframe.name = "hidden_iframe";
     iframe.style.display = "none";
     document.body.appendChild(iframe);
 
-    // form を作る
     const form = document.createElement("form");
     form.method = "POST";
     form.action = GAS_URL;
@@ -97,10 +96,8 @@ const jsPsych = initJsPsych({
     form.appendChild(input);
     document.body.appendChild(form);
 
-    // 送信
     form.submit();
 
-    // 少し待ってからメッセージ表示
     setTimeout(() => {
       document.body.innerHTML = `
         <div style="width:800px; margin:100px auto; text-align:center; font-size:20px;">
@@ -112,26 +109,22 @@ const jsPsych = initJsPsych({
   }
 });
 
-
-const timeline = [];
-
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzi6BX24ENHKGBPOUmFbzyW_woTgFkhGF24Xn-7TjO5OdE9sTVUEFQwKytgVrCxHQXpPA/exec";
-
-// コメント条件をランダム割付
+// -------------------------
+// 普通のランダム化
+// -------------------------
 const commentConditions = ['A', 'B', 'C', 'D', 'E'];
 const commentCondition = jsPsych.randomization.sampleWithoutReplacement(commentConditions, 1)[0];
 
-// 動画条件をランダム割付
 const videoConditions = [
   {
     video_condition: 1,
     video_id: "M7lc1UVf-VE",
-    video_title: "国際関係に関する中立的な内容の報道"
+    video_title: "米国に批判的な内容の報道"
   },
   {
     video_condition: 2,
     video_id: "2KhB3zo0lng",
-    video_title: "日本国内政治に関する中立的な内容の報道"
+    video_title: "米国に批判的な内容の報道"
   }
 ];
 
@@ -143,7 +136,11 @@ jsPsych.data.addProperties({
   video_id: selectedVideo.video_id
 });
 
-// 1. 同意画面
+const timeline = [];
+
+// -------------------------
+// 同意画面
+// -------------------------
 const consent = {
   type: jsPsychHtmlButtonResponse,
   stimulus: `
@@ -154,10 +151,11 @@ const consent = {
   `,
   choices: ['同意して進む']
 };
-
 timeline.push(consent);
 
-// 2. 属性アンケート
+// -------------------------
+// 属性アンケート
+// -------------------------
 const demographics = {
   type: jsPsychSurveyHtmlForm,
   html: `
@@ -179,10 +177,44 @@ const demographics = {
   `,
   button_label: '次へ'
 };
-
 timeline.push(demographics);
 
-// 2. イデオロギー
+// -------------------------
+// YouTubeニュース頻度
+// -------------------------
+const youtubeNewsFreqSurvey = {
+  type: jsPsychSurveyMultiChoice,
+  preamble: `
+    <div style="width:800px; margin:0 auto; text-align:left;">
+      <h3>YouTubeでのニュース視聴について</h3>
+      <p>以下の質問について、最もあてはまるものを1つ選んでください。</p>
+    </div>
+  `,
+  questions: [
+    {
+      prompt: "あなたは、YouTubeでニュース報道をどれくらいの頻度で見ますか？",
+      name: "youtube_news_freq",
+      options: [
+        "1日に複数回",
+        "1日に1回程度",
+        "週に2〜3回程度",
+        "週に1回程度",
+        "月に数回程度",
+        "月に1回程度",
+        "年に数回程度",
+        "年に1回程度",
+        "全く見ない"
+      ],
+      required: true
+    }
+  ],
+  button_label: "次へ"
+};
+timeline.push(youtubeNewsFreqSurvey);
+
+// -------------------------
+// イデオロギー
+// -------------------------
 const ideologyLabels = [
   "賛成である",
   "やや賛成である",
@@ -215,10 +247,11 @@ const ideologySurvey = {
   scale_width: 900,
   button_label: "次へ"
 };
-
 timeline.push(ideologySurvey);
 
-// 2. テレビ信頼
+// -------------------------
+// テレビ信頼
+// -------------------------
 const mediaTrustLabels = [
   "信頼している",
   "概ね信頼している",
@@ -248,175 +281,142 @@ const mediaTrustSurvey = {
   scale_width: 900,
   button_label: "次へ"
 };
-
 timeline.push(mediaTrustSurvey);
 
-// 2. YouTubeニュース視聴頻度
-const youtubeNewsFreqSurvey = {
-  type: jsPsychSurveyMultiChoice,
-  preamble: `
-    <div style="width:800px; margin:0 auto; text-align:left;">
-      <h3>YouTubeでのニュース視聴について</h3>
-      <p>以下の質問について、最もあてはまるものを1つ選んでください。</p>
-    </div>
-  `,
-  questions: [
-    {
-      prompt: "あなたは、YouTubeでニュース報道をどれくらいの頻度で見ますか？",
-      name: "youtube_news_freq",
-      options: [
-        "1日に複数回",
-        "1日に1回程度",
-        "週2，3日に1回程度",
-        "週に1回程度",
-        "月に数回程度",
-        "月に1回程度",
-        "年に数回程度",
-        "年に1回程度",
-        "全く見ない"
-      ],
-      required: true
-    }
-  ],
-  button_label: "次へ"
-};
-
-timeline.push(youtubeNewsFreqSurvey);
-
-// 条件ごとのコメント欄
+// -------------------------
+// コメントHTML生成
+// -------------------------
 function makeCommentHTML(username, text, likes, avatarColor) {
   return `
-    <div class="yt-comment">
-      <div class="yt-comment-avatar" style="background:${avatarColor};">
+    <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:20px;">
+      <div style="
+        width:40px;
+        height:40px;
+        border-radius:50%;
+        background:${avatarColor};
+        color:white;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-weight:bold;
+        font-size:16px;
+        flex-shrink:0;
+      ">
         ${username.charAt(0)}
       </div>
 
-      <div class="yt-comment-body">
-        <div class="yt-comment-meta">
-          <span class="yt-comment-user">${username}</span>
-          <span class="yt-comment-time">1日前</span>
+      <div style="text-align:left; max-width:700px;">
+        <div style="font-size:14px; margin-bottom:4px;">
+          <strong>${username}</strong>
+          <span style="color:#606060; margin-left:8px;">1日前</span>
         </div>
 
-        <div class="yt-comment-text">
+        <div style="font-size:15px; line-height:1.5; margin-bottom:8px;">
           ${text}
         </div>
 
-        <div class="yt-comment-actions">
+        <div style="font-size:13px; color:#606060;">
           👍 ${likes}
-          <span class="yt-comment-reply">返信</span>
+          <span style="margin-left:16px;">返信</span>
         </div>
       </div>
     </div>
   `;
 }
 
+// -------------------------
+// コメント条件
+// -------------------------
 let commentBlock = '';
 
 if (commentCondition === 'A') {
+  // 批判コメント（穏当）
   commentBlock = `
-      ${makeCommentHTML("media_watcher", "片方の見方に寄って聞こえる箇所があり、もう少し補足があるとよかったです。", 31, "#cc0000")}
-      ${makeCommentHTML("neutral_view", "重要な論点がいくつか触れられておらず、受け手が判断しにくい構成だと思います。", 24, "#0066cc")}
-      ${makeCommentHTML("citizen_voice", "背景の説明がやや少なく、この話題の見え方がかなり限定されているように感じました。", 18, "#009966")}
-      ${makeCommentHTML("citizen_voice2", "事実は示されていますが、文脈の置き方にもう少し慎重さがほしいと感じました。", 9, "#009966")}
-    
+    ${makeCommentHTML("media_watcher", "片方の見方に寄って聞こえる箇所があり、もう少し補足があるとよかったです。", 31, "#cc0000")}
+    ${makeCommentHTML("neutral_view", "重要な論点がいくつか触れられておらず、受け手が判断しにくい構成だと思います。", 24, "#0066cc")}
+    ${makeCommentHTML("citizen_voice", "背景の説明がやや少なく、この話題の見え方がかなり限定されているように感じました。", 18, "#009966")}
+    ${makeCommentHTML("citizen_voice2", "事実は示されていますが、文脈の置き方にもう少し慎重さがほしいと感じました。", 9, "#339966")}
   `;
 } else if (commentCondition === 'B') {
+  // 肯定コメント
   commentBlock = `
-   
-      ${makeCommentHTML("news_reader", "立場を決めつけずに説明していて、まず全体像を知るには十分だと感じました。", 31, "#cc6600")}
-      ${makeCommentHTML("policy_fan", "短い動画でも必要な論点が押さえられていて、状況をつかみやすかったです。", 24, "#3366cc")}
-      ${makeCommentHTML("daily_news", "感情をあおらずに要点を整理していて、落ち着いて見られる内容だったと思います。", 18, "#0099cc")}
-      ${makeCommentHTML("daily_news2", "余計な演出が少なく、淡々と情報をまとめている点が見やすかったです。", 9, "#0099cc")}
-    
+    ${makeCommentHTML("news_reader", "立場を決めつけずに説明していて、まず全体像を知るには十分だと感じました。", 31, "#cc6600")}
+    ${makeCommentHTML("policy_fan", "短い動画でも必要な論点が押さえられていて、状況をつかみやすかったです。", 24, "#3366cc")}
+    ${makeCommentHTML("daily_news", "感情をあおらずに要点を整理していて、落ち着いて見られる内容だったと思います。", 18, "#0099cc")}
+    ${makeCommentHTML("daily_news2", "余計な演出が少なく、淡々と情報をまとめている点が見やすかったです。", 9, "#0099cc")}
   `;
 } else if (commentCondition === 'C') {
+  // 無関連コメント
   commentBlock = `
-  
-      ${makeCommentHTML("video_viewer", "字幕が付いているので、音を出せないときでも内容を追いやすいです。", 31, "#999933")}
-      ${makeCommentHTML("voice_check", "このくらいの動画の長さだと、移動中でも最後まで見やすいですね。", 24, "#663399")}
-      ${makeCommentHTML("timekeeper", "通知で流れてきたので見に来ました。あとで関連動画も確認してみます。", 18, "#666666")}
-      ${makeCommentHTML("timekeeper", "最近サムネイルの雰囲気が少し変わりましたね。前より見つけやすいです。", 9, "#666666")}
-    
+    ${makeCommentHTML("video_viewer", "字幕が付いているので、音を出せないときでも内容を追いやすいです。", 31, "#999933")}
+    ${makeCommentHTML("voice_check", "このくらいの動画の長さだと、移動中でも最後まで見やすいですね。", 24, "#663399")}
+    ${makeCommentHTML("timekeeper", "通知で流れてきたので見に来ました。あとで関連動画も確認してみます。", 18, "#666666")}
+    ${makeCommentHTML("timekeeper2", "最近サムネイルの雰囲気が少し変わりましたね。前より見つけやすいです。", 9, "#666666")}
   `;
 } else if (commentCondition === 'D') {
   // コメントなし
-  commentBlock = `
-    
-      <div style="color:#606060; font-size:15px;">コメントはありません。</div>
-    
-  `;
+  commentBlock = ``;
 } else if (commentCondition === 'E') {
   // 批判コメント（非礼）
   commentBlock = `
-   
-      ${makeCommentHTML("hard_truth", "都合のいいところばかり並べていて、見ていてかなり白けた。", 31, "#cc0000")}
-      ${makeCommentHTML("critical_eye", "大事な論点を落としすぎ。これで分かった気にさせるのは、さすがに雑すぎる。", 24, "#990000")}
-      ${makeCommentHTML("fact_checker", "背景説明が薄すぎる。これじゃ話を雑に切ってるだけで、全然参考にならない。", 18, "#cc3300")}
-      ${makeCommentHTML("plain_speaker", "事実を並べれば済むと思ってるのか。文脈の置き方が雑で、正直ひどい。", 9, "#663300")}
-    
+    ${makeCommentHTML("hard_truth", "都合のいいところばかり並べていて、見ていてかなり白けた。", 31, "#cc0000")}
+    ${makeCommentHTML("critical_eye", "大事な論点を落としすぎ。これで分かった気にさせるのは、さすがに雑すぎる。", 24, "#990000")}
+    ${makeCommentHTML("fact_checker", "背景説明が薄すぎる。これじゃ話を雑に切ってるだけで、全然参考にならない。", 18, "#cc3300")}
+    ${makeCommentHTML("plain_speaker", "事実を並べれば済むと思ってるのか。文脈の置き方が雑で、正直ひどい。", 9, "#663300")}
   `;
 }
 
-// 3. 刺激画面（ダミー）
+// -------------------------
+// 刺激画面
+// -------------------------
 const stimulus = {
   type: jsPsychHtmlButtonResponse,
   stimulus: `
-    <div class="yt-page">
-      <div class="yt-main">
+    <div style="width:900px; margin:0 auto; text-align:center;">
+      <h2>ニュース動画</h2>
 
-        <div class="yt-player-wrap">
-          <iframe
-            class="yt-player"
-            src="https://www.youtube.com/embed/${selectedVideo.video_id}?rel=0"
-            title="YouTube video player"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen>
-          </iframe>
-        </div>
+      <div style="margin-bottom:16px;">
+        <iframe
+          width="800"
+          height="450"
+          src="https://www.youtube.com/embed/${selectedVideo.video_id}?rel=0"
+          title="YouTube video player"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen>
+        </iframe>
+      </div>
 
-        <div class="yt-meta">
-          <div class="yt-title">
-            ${selectedVideo.video_title}
-          </div>
+      <div style="width:800px; margin:0 auto; text-align:left; font-size:20px; font-weight:bold; margin-bottom:8px;">
+        ${selectedVideo.video_title}
+      </div>
 
-          <div class="yt-submeta">
-            12,345 回視聴
-          </div>
+      <div style="width:800px; margin:0 auto; text-align:left; color:#606060; font-size:14px; margin-bottom:24px;">
+        12,345 回視聴
+      </div>
 
-          <div class="yt-channel-row">
-            <div class="yt-channel-left">
-              <div class="yt-channel-icon">N</div>
-              <div>
-                <div class="yt-channel-name">News Channel</div>
-                <div class="yt-channel-subs">チャンネル登録者数 12.3万人</div>
-              </div>
-            </div>
-
-            <button class="yt-subscribe" type="button">登録</button>
-          </div>
-
-          <div class="yt-comments">
-            ${commentCondition === 'D'
-              ? `
-                <div class="yt-comments-header">コメント</div>
-                <div class="yt-no-comments">コメントはありません。</div>
-              `
-              : `
-                <div class="yt-comments-header">コメント 4件</div>
-                ${commentBlock}
-              `
-            }
-          </div>
-        </div>
+      <div style="margin-top:30px; text-align:left; width:800px; margin-left:auto; margin-right:auto;">
+        ${
+          commentCondition === 'D'
+            ? `
+              <div style="font-size:18px; font-weight:bold; margin-bottom:20px;">コメント</div>
+              <div style="color:#606060; font-size:15px;">コメントはありません。</div>
+            `
+            : `
+              <div style="font-size:18px; font-weight:bold; margin-bottom:20px;">コメント 4件</div>
+              ${commentBlock}
+            `
+        }
       </div>
     </div>
   `,
   choices: ['次へ']
 };
-
 timeline.push(stimulus);
 
-// 4. 事後アンケート
+// -------------------------
+// 事後アンケート
+// -------------------------
 const postSurvey = {
   type: jsPsychSurveyLikert,
   preamble: `
@@ -449,9 +449,11 @@ const postSurvey = {
   scale_width: 700,
   button_label: "次へ"
 };
-
 timeline.push(postSurvey);
 
+// -------------------------
+// 操作チェック
+// -------------------------
 const manipulationCheck = {
   type: jsPsychSurveyMultiChoice,
   preamble: `
@@ -476,16 +478,19 @@ const manipulationCheck = {
   ],
   button_label: "次へ"
 };
-
 timeline.push(manipulationCheck);
 
-// 5. 終了画面
+// -------------------------
+// 終了画面
+// -------------------------
 const endScreen = {
   type: jsPsychHtmlButtonResponse,
   stimulus: `<p>ご協力ありがとうございました。</p>`,
   choices: ['終了']
 };
-
 timeline.push(endScreen);
 
+// -------------------------
+// 実行
+// -------------------------
 jsPsych.run(timeline);
