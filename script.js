@@ -15,6 +15,7 @@ const jsPsych = initJsPsych({
     mergedData.comment_condition = commentCondition;
     mergedData.video_condition = selectedVideo.video_condition;
     mergedData.video_id = selectedVideo.video_id;
+    mergedData.total_time_sec = Math.round(jsPsych.getTotalTime() / 1000);
 
     // コメント欄操作チェックを数値化
     if (mergedData.comment_check === "コメント欄はこの報道に批判的だった（比較的穏やか）") {
@@ -119,12 +120,12 @@ const videoConditions = [
   {
     video_condition: 1,
     video_id: "M7lc1UVf-VE",
-    video_title: "米国に批判的な内容の報道"
+    video_title: "動画①"
   },
   {
     video_condition: 2,
-    video_id: "2KhB3zo0lng",
-    video_title: "米国に批判的な内容の報道"
+    video_id: "hpTTR6ndRig",
+    video_title: "動画②"
   }
 ];
 
@@ -147,7 +148,7 @@ const consent = {
     <h2>研究参加への同意</h2>
     <p>この研究では、ニュース動画を見て感想を回答していただきます。</p>
     <p>参加は任意であり、いつでも中止できます。</p>
-    <p>同意いただける場合は、下のボタンを押してください。</p>
+    <p>「仕事の詳細」をお読みいただいて同意いただける場合は、下のボタンを押してください。</p>
   `,
   choices: ['同意して進む']
 };
@@ -240,6 +241,7 @@ const ideologySurvey = {
     { prompt: "経済成長と環境保護では環境保護を優先したい", labels: ideologyLabels, required: true, name: "ideo_environment" },
     { prompt: "原発は直ちに廃止する", labels: ideologyLabels, required: true, name: "ideo_nuclear" },
     { prompt: "政府が職と収入をある程度保障する", labels: ideologyLabels, required: true, name: "ideo_work" },
+    { prompt: "この項目では「やや賛成である」を選択してください", labels: ideologyLabels, required: true, name: "trap" },
     { prompt: "学校で子供に愛国心を教える", labels: ideologyLabels, required: true, name: "ideo_aikoku" },
     { prompt: "外国人移住者が増えることは日本にとってよくないことである", labels: ideologyLabels, required: true, name: "ideo_immigrant" },
     { prompt: "同性同士の結婚を認める", labels: ideologyLabels, required: true, name: "ideo_marriage" }
@@ -373,7 +375,7 @@ const stimulus = {
   type: jsPsychHtmlButtonResponse,
   stimulus: `
     <div style="width:900px; margin:0 auto; text-align:center;">
-      <h2>ニュース動画</h2>
+      <h2>以下の動画を最後まで視聴してください。</h2>
 
       <div style="margin-bottom:16px;">
         <iframe
@@ -459,7 +461,7 @@ const manipulationCheck = {
   preamble: `
     <div style="width:800px; margin:0 auto; text-align:left;">
       <h3>コメント欄についての質問</h3>
-      <p>この画面に表示されたコメント欄について、最もあてはまるものを1つ選んでください。</p>
+      <p>先ほどの画面に表示された動画のコメント欄について、最もあてはまるものを1つ選んでください。</p>
     </div>
   `,
   questions: [
@@ -485,7 +487,12 @@ timeline.push(manipulationCheck);
 // -------------------------
 const endScreen = {
   type: jsPsychHtmlButtonResponse,
-  stimulus: `<p>ご協力ありがとうございました。</p>`,
+  stimulus: `
+  <p>本研究にご参加いただき、誠にありがとうございました。</p>
+  <p>この実験は、動画のコメントが報道評価に影響を与えるかを検証するものでした。研究の目的上、回答に影響が生じないよう、実験の開始前には詳しい目的をお伝えしていませんでした。</p>
+  <p>本研究では、ニュース動画に付されたコメントの内容や性質によって、視聴者がその報道をどのように受け止めるかが変化する可能性を検討しています。ご回答いただいた内容は、こうした問題を明らかにするための学術研究にのみ利用されます。</p>
+  <p>実験の性質上、研究目的の一部を事前に伏せていましたが、ご理解いただけますと幸いです。もし本研究についてご不明な点やご質問がある場合は、「仕事の詳細」に記載の研究責任者までお問い合わせください。</p>
+  `,
   choices: ['終了']
 };
 timeline.push(endScreen);
